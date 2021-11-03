@@ -4,6 +4,10 @@ import Container from "@material-ui/core/Container";
 import { Typography, Box, TextField, Button } from "@material-ui/core";
 import toast from "react-hot-toast";
 import { Web3Context } from "utils/Web3Provider";
+import abiArray from "abis/GLDToken.json";
+import { REACT_APP_CHAINID, REACT_APP_ASTRO_TOKEN_ADDRESS } from "utils/config";
+require("dotenv").config();
+var Tx = require("ethereumjs-tx");
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -35,6 +39,13 @@ export default function Main() {
     "0xA6fB689d3e90c7EbC60E9ff1f8B49c597afCA211"
   );
   const [toAmount, setToAmount] = useState(100);
+  const [amount, setAmount] = useState(200);
+  const [srcAddress, setSrcAddress] = useState(
+    "0x88B5B5BAe83a66283C9203d189333b7F5b5d9881"
+  );
+  const [desAddress, setDesAddress] = useState(
+    "0xA6fB689d3e90c7EbC60E9ff1f8B49c597afCA211"
+  );
 
   const handleClickWallet = async () => {
     if (connectionStatus) {
@@ -87,29 +98,60 @@ export default function Main() {
   const handleChangeToAmount = (event) => {
     setToAmount(event.target.value);
   };
-  const handleSendToken = () => {
-    console.log(
-      "**************",
-      toAddress,
-      window.web3.utils.toWei(toAmount.toString())
-    );
+  const handleSendToken = async () => {
     if (totalToken < toAmount || toAddress === "") {
       toast.error("Token is not enough!!!");
       return;
     }
     nftToken?.methods
-      .transferFrom(
-        address,
-        toAddress,
-        // window.web3.utils.toWei(toAmount.toString())
-        toAmount
-      )
-      .call()
+      .transfer(toAddress, window.web3.utils.toWei(toAmount.toString()))
+      .send({ from: address })
       .then((data) => {
-        console.log("#####################", data);
+        if (data.transactionHash) {
+          toast.success("Successfully send token!!!");
+        }
       });
   };
 
+  const handleSendTokenFromTo = () => {
+    console.log("+++++++++++++++++", srcAddress, desAddress, amount);
+    if (totalToken < toAmount || toAddress === "") {
+      toast.error("Token is not enough!!!");
+      return;
+    }
+    nftToken?.methods
+      .approve(srcAddress, window.web3.utils.toWei(amount.toString()))
+      .send({ from: address })
+      .then((data) => {
+        console.log("++++++++++++++", data);
+      });
+    nftToken?.methods
+      .transferFrom(
+        srcAddress,
+        desAddress,
+        window.web3.utils.toWei(amount.toString())
+      )
+      .send({ from: address })
+      .then((data) => {
+        console.log("#####################", data);
+        if (data.transactionHash) {
+          toast.success("Successfully send token!!!");
+        }
+      })
+      .catch((error) => {
+        console.error("onRejected function called: " + error.message);
+      });
+  };
+
+  const handleChangeSrcAddress = (event) => {
+    setSrcAddress(event.target.value);
+  };
+  const handleChangeDesAddress = (event) => {
+    setDesAddress(event.target.value);
+  };
+  const handleChangeAmount = (event) => {
+    setAmount(event.target.value);
+  };
   return (
     <Container component="main" className={classes.root}>
       <Box>
@@ -169,6 +211,38 @@ export default function Main() {
           <Button variant="contained" onClick={handleSendToken}>
             Send Token
           </Button>
+        </Box>
+        <Box m={2} textAlign="left">
+          <Typography variant="h6">TransferFrom &nbsp; : &nbsp;</Typography>
+          <Box display="flex" alignItems="center" justifyContent="start" m={2}>
+            <Typography variant="h6">From &nbsp; : &nbsp;</Typography>
+            <TextField
+              variant="outlined"
+              value={srcAddress}
+              onChange={handleChangeSrcAddress}
+              style={{ width: "450px", marginRight: "10px" }}
+            ></TextField>
+          </Box>
+          <Box display="flex" alignItems="center" justifyContent="start" m={2}>
+            <Typography variant="h6">
+              To &nbsp; &nbsp;&nbsp; : &nbsp;
+            </Typography>
+            <TextField
+              variant="outlined"
+              value={desAddress}
+              onChange={handleChangeDesAddress}
+              style={{ width: "450px", marginRight: "10px" }}
+            ></TextField>
+            <TextField
+              variant="outlined"
+              value={amount}
+              onChange={handleChangeAmount}
+              style={{ width: "100px", marginRight: "10px" }}
+            ></TextField>
+            <Button variant="contained" onClick={handleSendTokenFromTo}>
+              Send Token
+            </Button>
+          </Box>
         </Box>
       </Box>
     </Container>
